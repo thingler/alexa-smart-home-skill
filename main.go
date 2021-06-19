@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/iot"
 	"github.com/aws/aws-sdk-go/service/iotdataplane"
 	smarthome "github.com/orktes/go-alexa-smarthome"
 )
@@ -36,16 +37,24 @@ func main() {
 			},
 		})
 
-	awsConfig := &aws.Config{
+	dataPlaneConfig := &aws.Config{
 		Region:      &config.Region,
 		Credentials: creds,
 		Endpoint:    &config.IOTEndpoint,
 	}
+	dataPlaneClientIOT := iotdataplane.New(sess, dataPlaneConfig)
 
-	clientIOT := iotdataplane.New(sess, awsConfig)
+	iotConfig := &aws.Config{
+		Region:      &config.Region,
+		Credentials: creds,
+	}
+	clientIOT := iot.New(sess, iotConfig)
 
 	// mock data for a Thingler smart plug
-	mockThinglerSmartPlug(sm, clientIOT, config)
+	//mockThinglerSmartPlug(sm, dataPlaneClientIOT, config)
+
+	// Get registred smart plugs
+	getRegisteredSmartPlugs(sm, clientIOT, dataPlaneClientIOT, config)
 
 	lambda.Start(sm.Handle)
 }

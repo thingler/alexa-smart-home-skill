@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/iot"
 	"github.com/aws/aws-sdk-go/service/iotdataplane"
 	smarthome "github.com/orktes/go-alexa-smarthome"
 )
@@ -47,6 +49,40 @@ func (smartplug *ThinglerSmartPlug) SetValue(val interface{}) error {
 
 func (smartplug *ThinglerSmartPlug) UpdateChannel() <-chan interface{} {
 	return nil
+}
+
+func getRegisteredSmartPlugs(sm *smarthome.Smarthome, clientIOT *iot.IoT, dataPlaneIOTClient *iotdataplane.IoTDataPlane, config *Config) {
+
+	listThingsConfig := iot.ListThingsInput{
+		// AttributeName:  aws.String("device"),
+		// AttributeValue: aws.String("PowerController"),
+		ThingTypeName: aws.String("Thingler_smartplug"),
+	}
+
+	things, err := clientIOT.ListThings(&listThingsConfig)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// fmt.Printf("%s", things)
+
+	for _, thing := range things.Things {
+		smartPlugDevice := smarthome.NewAbstractDevice(
+			*thing.Attributes["id"],
+			*thing.Attributes["name"],
+			*thing.Attributes["manufacturer"],
+			*thing.Attributes["description"],
+		)
+		smartPlugDevice.AddDisplayCategory("SMARTPLUG")
+		capability := smartPlugDevice.NewCapability("PowerController")
+		capability.AddPropertyHandler("powerState", &ThinglerSmartPlug{
+			val:       "ON",
+			iotClient: dataPlaneIOTClient,
+			config:    config,
+		})
+		sm.AddDevice(smartPlugDevice)
+	}
 }
 
 func mockThinglerSmartPlug(sm *smarthome.Smarthome, IOTClient *iotdataplane.IoTDataPlane, config *Config) {
