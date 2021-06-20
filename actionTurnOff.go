@@ -10,6 +10,7 @@ import (
 type TurnOff struct {
 	IOTClient *iotdataplane.IoTDataPlane
 	Topic     *string
+	deviceId  *string
 }
 
 // Name return the action name

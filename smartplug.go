@@ -13,6 +13,7 @@ type ThinglerSmartPlug struct {
 	val       interface{}
 	iotClient *iotdataplane.IoTDataPlane
 	config    *Config
+	deviceId  *string
 }
 
 func (smartplug *ThinglerSmartPlug) GetValue() (interface{}, error) {
@@ -29,11 +30,13 @@ func (smartplug *ThinglerSmartPlug) SetValue(val interface{}) error {
 	turnOn := &TurnOn{
 		IOTClient: smartplug.iotClient,
 		Topic:     &smartplug.config.IOTTopic,
+		deviceId:  smartplug.deviceId,
 	}
 
 	turnOff := &TurnOff{
 		IOTClient: smartplug.iotClient,
 		Topic:     &smartplug.config.IOTTopic,
+		deviceId:  smartplug.deviceId,
 	}
 
 	action, err := NewActionFactory().
@@ -80,26 +83,8 @@ func getRegisteredSmartPlugs(sm *smarthome.Smarthome, clientIOT *iot.IoT, dataPl
 			val:       "ON",
 			iotClient: dataPlaneIOTClient,
 			config:    config,
+			deviceId:  thing.Attributes["id"],
 		})
 		sm.AddDevice(smartPlugDevice)
 	}
-}
-
-func mockThinglerSmartPlug(sm *smarthome.Smarthome, IOTClient *iotdataplane.IoTDataPlane, config *Config) {
-
-	smartPlugDevice := smarthome.NewAbstractDevice(
-		"thingler-plug-1",
-		"Thingler smart plug",
-		"Thingler",
-		"Thingler smart plug",
-	)
-	smartPlugDevice.AddDisplayCategory("SMARTPLUG")
-	capability := smartPlugDevice.NewCapability("PowerController")
-	capability.AddPropertyHandler("powerState", &ThinglerSmartPlug{
-		val:       "ON",
-		iotClient: IOTClient,
-		config:    config,
-	})
-
-	sm.AddDevice(smartPlugDevice)
 }
