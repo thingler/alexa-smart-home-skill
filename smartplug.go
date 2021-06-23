@@ -13,7 +13,7 @@ type ThinglerSmartPlug struct {
 	val       interface{}
 	iotClient *iotdataplane.IoTDataPlane
 	config    *Config
-	deviceId  *string
+	thingID   *string
 }
 
 func (smartplug *ThinglerSmartPlug) GetValue() (interface{}, error) {
@@ -30,13 +30,13 @@ func (smartplug *ThinglerSmartPlug) SetValue(val interface{}) error {
 	turnOn := &TurnOn{
 		IOTClient: smartplug.iotClient,
 		Topic:     &smartplug.config.IOTTopic,
-		deviceId:  smartplug.deviceId,
+		ThingID:   smartplug.thingID,
 	}
 
 	turnOff := &TurnOff{
 		IOTClient: smartplug.iotClient,
 		Topic:     &smartplug.config.IOTTopic,
-		deviceId:  smartplug.deviceId,
+		ThingID:   smartplug.thingID,
 	}
 
 	action, err := NewActionFactory().
@@ -68,7 +68,7 @@ func getRegisteredSmartPlugs(sm *smarthome.Smarthome, clientIOT *iot.IoT, dataPl
 		panic(err)
 	}
 
-	// fmt.Printf("%s", things)
+	fmt.Printf("%s", things)
 
 	for _, thing := range things.Things {
 		smartPlugDevice := smarthome.NewAbstractDevice(
@@ -83,7 +83,7 @@ func getRegisteredSmartPlugs(sm *smarthome.Smarthome, clientIOT *iot.IoT, dataPl
 			val:       "ON",
 			iotClient: dataPlaneIOTClient,
 			config:    config,
-			deviceId:  thing.Attributes["id"],
+			thingID:   thing.Attributes["id"],
 		})
 		sm.AddDevice(smartPlugDevice)
 	}

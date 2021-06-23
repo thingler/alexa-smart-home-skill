@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/aws/aws-sdk-go/service/iotdataplane"
@@ -10,7 +11,7 @@ import (
 type TurnOff struct {
 	IOTClient *iotdataplane.IoTDataPlane
 	Topic     *string
-	deviceId  *string
+	ThingID   *string
 }
 
 // Name return the action name
@@ -23,9 +24,16 @@ func (action *TurnOff) Do() error {
 
 	log.Printf("action %s triggered", action.Name())
 
+	message := &ActionMessage{
+		Action:  "off",
+		ThingID: *action.ThingID,
+	}
+
+	jsonString, _ := json.Marshal(message)
+
 	publishInput := &iotdataplane.PublishInput{
 		Topic:   action.Topic,
-		Payload: []byte("off"),
+		Payload: jsonString,
 	}
 
 	_, err := action.IOTClient.Publish(publishInput)

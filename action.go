@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+type ActionMessage struct {
+	Action  string `json:"action"`
+	ThingID string `json:"thingID"`
+}
+
 // Action interface
 type Action interface {
 	Name() string
