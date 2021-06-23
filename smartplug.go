@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/iot"
 	"github.com/aws/aws-sdk-go/service/iotdataplane"
 	smarthome "github.com/orktes/go-alexa-smarthome"
 )
@@ -11,6 +13,7 @@ type ThinglerSmartPlug struct {
 	val       interface{}
 	iotClient *iotdataplane.IoTDataPlane
 	config    *Config
+	thingID   *string
 }
 
 func (smartplug *ThinglerSmartPlug) GetValue() (interface{}, error) {
@@ -27,11 +30,13 @@ func (smartplug *ThinglerSmartPlug) SetValue(val interface{}) error {
 	turnOn := &TurnOn{
 		IOTClient: smartplug.iotClient,
 		Topic:     &smartplug.config.IOTTopic,
+		ThingID:   smartplug.thingID,
 	}
 
 	turnOff := &TurnOff{
 		IOTClient: smartplug.iotClient,
 		Topic:     &smartplug.config.IOTTopic,
+		ThingID:   smartplug.thingID,
 	}
 
 	action, err := NewActionFactory().
@@ -49,21 +54,37 @@ func (smartplug *ThinglerSmartPlug) UpdateChannel() <-chan interface{} {
 	return nil
 }
 
-func mockThinglerSmartPlug(sm *smarthome.Smarthome, IOTClient *iotdataplane.IoTDataPlane, config *Config) {
+func getRegisteredSmartPlugs(sm *smarthome.Smarthome, clientIOT *iot.IoT, dataPlaneIOTClient *iotdataplane.IoTDataPlane, config *Config) {
 
-	smartPlugDevice := smarthome.NewAbstractDevice(
-		"thingler-plug-1",
-		"Thingler smart plug",
-		"Thingler",
-		"Thingler smart plug",
-	)
-	smartPlugDevice.AddDisplayCategory("SMARTPLUG")
-	capability := smartPlugDevice.NewCapability("PowerController")
-	capability.AddPropertyHandler("powerState", &ThinglerSmartPlug{
-		val:       "ON",
-		iotClient: IOTClient,
-		config:    config,
-	})
+	listThingsConfig := iot.ListThingsInput{
+		// AttributeName:  aws.String("device"),
+		// AttributeValue: aws.String("PowerController"),
+		ThingTypeName: aws.String("Thingler_smartplug"),
+	}
 
-	sm.AddDevice(smartPlugDevice)
+	things, err := clientIOT.ListThings(&listThingsConfig)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%s", things)
+
+	for _, thing := range things.Things {
+		smartPlugDevice := smarthome.NewAbstractDevice(
+			*thing.Attributes["id"],
+			*thing.Attributes["name"],
+			*thing.Attributes["manufacturer"],
+			*thing.Attributes["description"],
+		)
+		smartPlugDevice.AddDisplayCategory("SMARTPLUG")
+		capability := smartPlugDevice.NewCapability("PowerController")
+		capability.AddPropertyHandler("powerState", &ThinglerSmartPlug{
+			val:       "ON",
+			iotClient: dataPlaneIOTClient,
+			config:    config,
+			thingID:   thing.Attributes["id"],
+		})
+		sm.AddDevice(smartPlugDevice)
+	}
 }
